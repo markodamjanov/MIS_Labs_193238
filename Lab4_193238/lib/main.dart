@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:lab4_193238/notificationservice.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:table_calendar/table_calendar.dart';
+import 'dart:collection';
 
-void main()  {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-   NotificationService().initNotification();
+  NotificationService().initNotification();
   runApp(MyApp());
 }
 
@@ -34,20 +36,44 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
+class Term {
+  late String name;
+  late DateTime date;
+  late String time;
+  late String person;
+
+  Term(this.name, this.date, this.time, this.person);
+}
+
+List<Term> termsList = [
+  Term('Physics', DateTime.now(), '10 AM', 'Marko'),
+  Term('Discrete Mathematics', DateTime(2022, 12, 21), '11 AM', 'Marko'),
+  Term('Programming', DateTime(2022, 12, 21), '2 PM', 'Marko'),
+];
+
 final terms = [
-  {"name": 'Physics', "date": '15 Nov, 2022', "time": '08:00 AM', "person": "Marko"},
-  {
-    "name": 'Discrete Mathematics',
-    "date": '20 Nov, 2022',
-    "time": '10:00 AM',
-    "person": "Marko"
-  },
+  // {
+  //   "name": 'Physics',
+  //   "date": '15 Nov, 2022',
+  //   "time": '08:00 AM',
+  //   "person": "Marko"
+  // },
+  // {
+  //   "name": 'Discrete Mathematics',
+  //   "date": '20 Nov, 2022',
+  //   "time": '10:00 AM',
+  //   "person": "Marko"
+  // },
 ];
 
 class _MyHomePageState extends State<MyHomePage> {
   var textEditingController = TextEditingController();
   var emailController = TextEditingController();
   var passController = TextEditingController();
+  CalendarFormat format = CalendarFormat.month;
+  DateTime selectedDay = DateTime.now();
+  DateTime focusedDay = DateTime.now();
+  TextEditingController _eventController = TextEditingController();
 
   @override
   void initState() {
@@ -67,8 +93,8 @@ class _MyHomePageState extends State<MyHomePage> {
   var emailLogged;
 
   void addTerm() {
-    NotificationService().showNotification(1, "LoggedIn", "Login", 5);
-    if(_name != "") {
+    NotificationService().showNotification(1, "Terms", "Added a new term", 5);
+    if (_name != "") {
       setState(() {
         terms.add({
           "name": _name,
@@ -77,10 +103,23 @@ class _MyHomePageState extends State<MyHomePage> {
           "person": emailLogged
         });
       });
+      termsList.add(
+        Term(_name, _date, _time.format(context), emailLogged),
+      );
     }
     textEditingController.clear();
     _datePicked = false;
     _timePicked = false;
+  }
+
+  List<Term> _getEventsfromDay(DateTime date) {
+    return termsList.where((element) => element.date.day == date.day).toList() ?? [];
+  }
+
+  @override
+  void dispose() {
+    _eventController.dispose();
+    super.dispose();
   }
 
   @override
@@ -120,91 +159,159 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         body: !_isLoggedIn
             ? LoginPage()
-            : Column(
-                children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 16),
-                    child: Text(
-                      "Welcome " + emailLogged,
-                      style:
-                          TextStyle(fontSize: 35, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.left,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 16),
-                    child: TextField(
-                      controller: textEditingController,
-                      onChanged: (text) {
-                        setState(() {
-                          _name = text;
-                        });
-                      },
-                      decoration: const InputDecoration(
-                        border: UnderlineInputBorder(),
-                        labelText: 'Enter subject',
+            : SingleChildScrollView( child: Column(
+                  children: <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      child: Text(
+                        "Welcome " + emailLogged,
+                        style: TextStyle(
+                            fontSize: 25, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.left,
                       ),
                     ),
-                  ),
-                  Text(_datePicked
-                      ? DateFormat.yMMMd().format(_date)
-                      : 'Pick date'),
-                  ElevatedButton(
-                    child: Text(!_datePicked ? 'Pick a date' : 'Change date'),
-                    onPressed: () async {
-                      showDatePicker(
-                              context: context,
-                              initialDate:
-                                  _date == null ? DateTime.now() : _date,
-                              firstDate: DateTime(2022),
-                              lastDate: DateTime(2023))
-                          .then((date) {
-                        setState(() {
-                          _date = date!;
-                          _datePicked = true;
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      child: TextField(
+                        controller: textEditingController,
+                        onChanged: (text) {
+                          setState(() {
+                            _name = text;
+                          });
+                        },
+                        decoration: const InputDecoration(
+                          border: UnderlineInputBorder(),
+                          labelText: 'Enter subject',
+                        ),
+                      ),
+                    ),
+                    Text(_datePicked
+                        ? DateFormat.yMMMd().format(_date)
+                        : 'Pick date'),
+                    ElevatedButton(
+                      child: Text(!_datePicked ? 'Pick a date' : 'Change date'),
+                      onPressed: () async {
+                        showDatePicker(
+                                context: context,
+                                initialDate:
+                                    _date == null ? DateTime.now() : _date,
+                                firstDate: DateTime(2022),
+                                lastDate: DateTime(2023))
+                            .then((date) {
+                          setState(() {
+                            _date = date!;
+                            _datePicked = true;
+                          });
                         });
-                      });
-                    },
-                  ),
-                  Text(_timePicked ? _time.format(context) : 'Pick time'),
-                  ElevatedButton(
-                    child: Text(!_timePicked ? 'Pick a time' : 'Change Time'),
-                    onPressed: () async {
-                      showTimePicker(
-                              context: context,
-                              initialTime: TimeOfDay(
-                                  hour: _date.hour, minute: _date.minute))
-                          .then((time) {
-                        setState(() {
-                          _time = time!;
-                          _timePicked = true;
+                      },
+                    ),
+                    Text(_timePicked ? _time.format(context) : 'Pick time'),
+                    ElevatedButton(
+                      child: Text(!_timePicked ? 'Pick a time' : 'Change Time'),
+                      onPressed: () async {
+                        showTimePicker(
+                                context: context,
+                                initialTime: TimeOfDay(
+                                    hour: _date.hour, minute: _date.minute))
+                            .then((time) {
+                          setState(() {
+                            _time = time!;
+                            _timePicked = true;
+                          });
                         });
-                      });
-                      ;
-                    },
-                  ),
-                  Expanded(
-                      child: ListView.builder(
-                    itemCount: terms.length,
-                    itemBuilder: (context, index) {
-                      return Card(
+                        ;
+                      },
+                    ),
+                    TableCalendar(
+                      focusedDay: selectedDay,
+                      firstDay: DateTime(1990),
+                      lastDay: DateTime(2050),
+                      calendarFormat: format,
+                      onFormatChanged: (CalendarFormat _format) {
+                        setState(() {
+                          format = _format;
+                        });
+                      },
+                      startingDayOfWeek: StartingDayOfWeek.monday,
+                      daysOfWeekVisible: true,
+
+                      //Day Changed
+                      onDaySelected: (DateTime selectDay, DateTime focusDay) {
+                        if (!isSameDay(selectedDay, selectDay)) {
+                          setState(() {
+                            selectedDay = selectDay;
+                            focusedDay = focusDay;
+                          });
+                        }
+                        print(focusedDay);
+                      },
+                      selectedDayPredicate: (DateTime date) {
+                        return isSameDay(selectedDay, date);
+                      },
+
+                      eventLoader: (day) {
+                        return _getEventsfromDay(day);
+                      },
+
+                      //To style the Calendar
+                      calendarStyle: CalendarStyle(
+                        isTodayHighlighted: true,
+                        selectedDecoration: BoxDecoration(
+                          color: Colors.blue,
+                          shape: BoxShape.rectangle,
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                        selectedTextStyle: TextStyle(color: Colors.white),
+                        todayDecoration: BoxDecoration(
+                          color: Colors.purpleAccent,
+                          shape: BoxShape.rectangle,
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                        defaultDecoration: BoxDecoration(
+                          shape: BoxShape.rectangle,
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                        weekendDecoration: BoxDecoration(
+                          shape: BoxShape.rectangle,
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                      ),
+                      headerStyle: HeaderStyle(
+                        formatButtonVisible: true,
+                        titleCentered: true,
+                        formatButtonShowsNext: false,
+                        formatButtonDecoration: BoxDecoration(
+                          color: Colors.blue,
+                          borderRadius: BorderRadius.circular(5.0),
+                        ),
+                        formatButtonTextStyle: TextStyle(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    ..._getEventsfromDay(selectedDay).map(
+                          (Term term) => Card(
                         child: ListTile(
                           title: Text(
-                            "Term for: " + terms[index]["person"]! + " \n" + terms[index]["name"]!,
+                            "Term for: " +
+                                term.person +
+                                " \n" +
+                                term.name,
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                           subtitle: Text(
-                            '${terms[index]["date"]} - ${terms[index]["time"]}',
+                            '${DateFormat.yMMMd().format(term.date)} - ${term.time}',
                             style: TextStyle(color: Colors.grey),
                           ),
                         ),
-                      );
-                    },
-                  )),
-                ],
-              ),
+                      ),
+                    ),
+
+                  ],
+                ),
+        ),
       ),
     );
   }
@@ -215,7 +322,7 @@ class _MyHomePageState extends State<MyHomePage> {
     var passwordLogged = prefs.getString("password");
 
     if (emailLogged != null && passwordLogged != null) {
-      NotificationService().showNotification(1, "LoggedIn", "Login", 5);
+      NotificationService().showNotification(1, "Login", "Logged In as " + emailLogged, 5);
       _isLoggedIn = true;
     } else {
       _isLoggedIn = false;
