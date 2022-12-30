@@ -354,6 +354,7 @@ class LoginPage extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 16),
           child: TextField(
+            obscureText: true,
             onChanged: (text) {
               _password = text;
             },
